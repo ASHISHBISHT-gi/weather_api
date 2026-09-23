@@ -3,3 +3,7 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+    font-family: "dmsans";
+    src: url("../assets/fonts/Bricolage_Grotesque/static/BricolageGrotesque-Bold.ttf");
+}
