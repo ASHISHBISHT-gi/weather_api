@@ -1,6 +1,6 @@
 //App.tsx 
 import { fetchWeatherApi } from "openmeteo";
-import { useRef } from "react";
+import { useRef, useState, type ReactElement } from "react";
 const url = "https://api.open-meteo.com/v1/forecast";
 
 // feature: Header 
@@ -20,14 +20,77 @@ function Header(){
     </header>
   )
 }
-// feature: search
-function Search(){
+function Select_Place({place}){
+    // interface Location{
+    //     latitude: number;
+    //     longitude: number;
+    //     hourly: string;
+    //     forecast_days: number;
+    // }
+    const params = {
+        latitude: place.latitude,
+        longitude:place.longitude,
+        hourly:"temperature_2m",
+        models:"dwd_icon_seamless",
+        current: ["wind_speed_10m", "temperature_2m", "relative_humidity_2m", "precipitation"],
+        forecast_days: 7,
+};
+    const onSelectPlace= async (e) => {
+
+        const responses = await fetchWeatherApi(url,params);
+        console.log("weather is ",responses[0]);
+        // task: extract data from response[0]
+        const response = responses[0];
+        const current = response.current()!;
+        const hourly = response.hourly()!;
+        const utcOffsetSeconds = response.utcOffsetSeconds();
+        const weatherData ={
+          current: {
+              time: new Date((Number(current?.time()) + utcOffsetSeconds) * 1000),
+              wind_speed__10m: current.variables(0)!.value(),
+              temperature_2m: current.variables(1)!.value(),
+              relative_humidity_2m: current.variables(2)!.value(),
+              precipitation: current.variables(3)!.value(),
+          }, 
+          hourly: {
+              time: Array.from(
+                {length: (Number(hourly.timeEnd()) - Number(hourly.time())) / hourly.interval()},
+                (_ , i ) => new Date((Number(hourly.time()) + i * hourly.interval() + utcOffsetSeconds)*1000)
+              ),
+              temperature_2m: hourly.variables(0)!.valuesArray(),
+          },
+        }; 
+        console.log("current data is ",weatherData.current);
+        console.log("Hourly data is ",weatherData.hourly);
+    }
+    console.log("place is ",place);
+    return <>
+        <p onClick={onSelectPlace}>{place.admin1}/{place.country}</p>
+    </>
+}
+// feature: click search button to get all the places name 
+function SearchPlaces(){
   const search_url: string = "https://geocoding-api.open-meteo.com/v1/search?name="
-  // search place
-  const submitHandler = async (e)=>{
+  const place_ref = useRef(null);
+  const [test,setTest] = useState(0);
+  const [place_list, setPlaces] = useState([]);
+  // when submit button is clicked, fetches all the queried search from the api to place_list
+  const getPlacesHandler = async (e)=>{
       e.preventDefault();
       const clientData = new FormData(e.target);
-      console.log("clientData is ",clientData);
+      console.log("place_ref is ",place_ref);
+      console.log("place_ref ",place_ref.current.value);
+      if(place_ref.current.value){
+        const response = await fetch(search_url+place_ref.current.value);
+        const response_json = await response.json();
+        if(response_json){
+            setPlaces(response_json.results);
+        }
+        console.log("response is ",response_json.results);
+      }
+      // helloe there i am ashish 
+      // console.log("clientData is ",clientData.has("place"));
+      // console.log("lets see ",new URLSearchParams(clientData));
       // const response = await fetch(search_url)
   }
   return(
@@ -36,10 +99,21 @@ function Search(){
       {/* heading and search input */}
       <h1 className="text-6xl font-[dmsans] box-border px-[0.5rem]
       my-[2rem]">How's the sky looking today?</h1>
-      <form onSubmit={submitHandler} className="border">
-        <input className="text-black" type="search" placeholder="Search for a place..."/>
-        <button>Search</button>
+      <form onSubmit={getPlacesHandler} className="border">
+        <input ref={place_ref} className="text-black" type="search"   name="place" placeholder="Search for a place..."/>
+        <button type="submit">Search</button>
+        {/* list all the places */}
+
+        {/* solved: map inside ternary operator not working */}
+        <section>
+          {/* list all the places to select by the user */}
+          { place_list ? (place_list.map((place): ReactElement=> 
+          <div key={place.id}><Select_Place place={place}></Select_Place></div>)) 
+          : ""}
+        </section>
       </form>
+      <button onClick={()=>(setTest(test+1), console.log("new_place_ref ", place_ref.current.value))}>{test}</button>
+      {/* { console.log("new_place_ref ",place_ref.current.value) }  */}
     </div>
   )
 }
@@ -136,7 +210,7 @@ export default function App(){
   px-[1rem] pt-[1rem] pb-[2rem]">
     <Header></Header>
     <div className="flex flex-col items-center">
-      <Search></Search>
+      <SearchPlaces></SearchPlaces>
       <Display></Display>
     </div>
   </main>
