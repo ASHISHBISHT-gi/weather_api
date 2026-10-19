@@ -31,8 +31,9 @@ function Select_Place({place,setweatherplace,setplacelist, setnameweather}){
         latitude: place.latitude,
         longitude:place.longitude,
         hourly:"temperature_2m",
+        daily: ["temperature_2m_max" , "temperature_2m_min", "weather_code"],
         models:"dwd_icon_seamless",
-        current: ["wind_speed_10m", "temperature_2m", "relative_humidity_2m", "precipitation"],
+        current: ["wind_speed_10m", "temperature_2m", "relative_humidity_2m", "precipitation", "apparent_temperature"],
         forecast_days: 7,
 };
     const onSelectPlace= async (e) => {
@@ -42,6 +43,7 @@ function Select_Place({place,setweatherplace,setplacelist, setnameweather}){
         // task: extract data from response[0]
         const response = responses[0];
         const current = response.current()!;
+        const daily = response.daily()!;
         const hourly = response.hourly()!;
         const utcOffsetSeconds = response.utcOffsetSeconds();
         const weatherData ={
@@ -51,6 +53,7 @@ function Select_Place({place,setweatherplace,setplacelist, setnameweather}){
               temperature_2m: current.variables(1)!.value(),
               relative_humidity_2m: current.variables(2)!.value(),
               precipitation: current.variables(3)!.value(),
+              apparent_temperature: current.variables(4)!.value(),
           }, 
           hourly: {
             // 168 entries -> 24 hours * 7 = 168
@@ -60,6 +63,15 @@ function Select_Place({place,setweatherplace,setplacelist, setnameweather}){
                 (_ , i ) => new Date((Number(hourly.time()) + i * hourly.interval() + utcOffsetSeconds)*1000).toString()
               )),
               temperature_2m: hourly.variables(0)!.valuesArray(),
+          },
+          daily:{
+            time: Array.from(
+              {length: (Number(daily.timeEnd()) - Number(daily.time())) / daily.interval()},
+              (_,i) => new Date((Number(daily.time()) + i * daily.interval() + utcOffsetSeconds) * 1000)
+            ),
+            temperature_2m_max: daily.variables(0)!.valuesArray(),
+            temperature_2m_min: daily.variables(1)!.valuesArray(),
+            weather_code: daily.variables(2)!.valuesArray(),
           },
           place: {
             country: place.country,
@@ -140,26 +152,25 @@ function Country({weatherdata}){
           { weatherdata.place ? <h1>{` ${weatherdata.place.name}, ${weatherdata.place.country}`} </h1>: "" }
           <p>{weatherdata.current ? weatherdata.current.time.toString() : "data not found"}</p>
         </div>
-        { weatherdata.current ? <h1>{`${weatherdata.current.temperatue}^`}</h1> : ""}
+        { weatherdata.current ? <h1>{`${weatherdata.current.temperature_2m.toFixed(2)}^`}</h1> : ""}
       </section>
 
       {/* country weather attributes */}
       <section>
         <div>
-          <p>Feels Like</p>
-          <h2>64^</h2>
+        { weatherdata.current ? <><p>Feels Like</p> <h2>{`${weatherdata.current.apparent_temperature.toFixed(2)}^`}</h2> </> : "" }
         </div>
         <div>
           <p>Humidity</p>
-          <h2>46%</h2>
+        { weatherdata.current ?  <h2>{`${weatherdata.current.relative_humidity_2m}%`}</h2> : "" } 
         </div>
         <div>
           <p>Wind</p>
-          <h2>9 mph</h2>
+        { weatherdata.current ?  <h2>{`${weatherdata.current.wind_speed_10m} mph`}</h2> : ""}
         </div>
         <div>
           <p>Precipitation</p>
-          <h2>0 in</h2>
+        { weatherdata.current ? <h2> {`${weatherdata.current.precipitation} in`} </h2> : ""}
         </div>
       </section>
     </div>
@@ -167,21 +178,88 @@ function Country({weatherdata}){
 }
 
 // feature: daily_forecast
-function Forecast(){
+function Forecast({weatherdata}){
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const weather_codes_name = {
+	"0": "Clear sky",
+	"1": "Mainly clear",
+	"2": "Partly cloudy",
+	"3": "Overcast",
+	"45": "Fog",
+	"48": "Depositing rime fog",
+	"51": "Light drizzle",
+	"53": "Moderate drizzle",
+	"55": "Dense drizzle",
+	"56": "Light freezing drizzle",
+	"57": "Dense freezing drizzle",
+	"61": "Slight rain",
+	"63": "Moderate rain",
+	"65": "Heavy rain",
+	"66": "Light freezing rain",
+	"67": "Heavy freezing rain",
+	"71": "Slight snowfall",
+	"73": "Moderate snowfall",
+	"75": "Heavy snowfall",
+	"77": "Snow grains",
+	"80": "Slight rain showers",
+	"81": "Moderate rain showers",
+	"82": "Violent rain showers",
+	"85": "Slight snow showers",
+	"86": "Heavy snow showers",
+	"95": "Thunderstorm",
+	"96": "Thunderstorm with slight hail",
+	"97": "Heavy thunderstorm",
+	"99": "Thunderstorm with heavy hail"
+};
+const pictures = {
+  "Light drizzle" : "../assets/images/icon-drizzle.webp",
+  "Moderate drizzle" : "../assets/images/icon-drizzle.webp",
+  "Dense drizzle" : "../assets/images/icon-drizzle.webp",
+  "Light freezing drizzle" : "../assets/images/icon-drizzle.webp",
+  "Dense freezing drizzle" : "../assets/images/icon-drizzle.webp",
+  "slight rain" : "../assets/images/icon-rain.webp",
+  "Moderate rain" : "../assets/images/icon-rain.webp",
+  "Heavy rain" : "../assets/images/icon-rain.webp",
+  "Light freezing rain" : "../assets/images/icon-rain.webp",
+  "Heavy freezing rain" : "../assets/images/icon-rain.webp",
+  "Slight rain showers" : "../assets/images/icon-rain.webp",
+  "Moderate rain showers" : "../assets/imagses/icon-rain.webp",
+  "Violent rain showers" : "../assets/images/icon-rain.webp",
+  "Slight snowfall" : "../assets/images/icon-snow.webp",
+  "Moderate snowfall" : "../assets/images/icon-snow.webp",
+  "Heavy snowfall" : "../assets/images/icon-snow.webp",
+  "Snow grains" : "../assets/images/icon-snow.webp",
+  "Slight snow showers" : "../assets/images/icon-snow.webp",
+  "Heavy snow showers" : "../assets/images/icon-snow.webp",
+  "Thunderstorm" : "../assets/images/icon-storm.webp",
+  "Thunderstorm with slight hail" : "../assets/images/icon-storm.webp",
+  "Heavy thunderstorm" : "../assets/images/icon-storm.webp",
+  "Thunderstorm with heavy hail" : "../assets/images/icon-storm.webp",
+  "Fog" : "../assets/images/icon-fog.webp",
+  "Depositing rime fog" : "../assets/images/icon-fog.webp",
+  "Overcast" : "../assets/images/icon-overcast.webp",
+  "Partly cloudy" : "../assets/images/icon-partly-cloudy.webp",
+  "Clear sky" : "../assets/images/icon-sunny.webp",
+  "Mainly clear" : "../assets/images/icon-sunny.webp"
+}
   return(
     <div>
       <h3>Daily forecast</h3>
       {/* week_forecast */}
       <section>
         { /* task: for loop to display weeks data */ }
-        <div>
-          <p>Tue</p>
-          {/* <img src="" alt="" /> */}
+        
+      { weatherdata.daily ? (weatherdata.daily.time.map((time , index) => 
+        <div key={time.toString()+index}>
+          <p>{days[weatherdata.daily.time[index].getDay()]}</p>
+          <img src={pictures[weather_codes_name[weatherdata.daily.weather_code[index].toString()]]} />
           <div>
-            <p>68^</p>
-            <p>57^</p>
+            <p>{weatherdata.daily.temperature_2m_max[index]}</p>
+            <p>{weatherdata.daily.temperature_2m_min[index]}</p>
           </div>
         </div>
+      )) : ""}
+
       </section>
     </div>
   )
@@ -192,7 +270,7 @@ function Display_left({weather_data}){
   return(
     <div>
       <Country weatherdata={weather_data}></Country>
-      <Forecast></Forecast>
+      <Forecast weatherdata={weather_data}></Forecast>
     </div>
   )
 }
@@ -228,7 +306,7 @@ export default function App(){
           latitude: current_weather_name.latitude,
           longitude: current_weather_name.longitude,
           models:"dwd_icon_seamless",
-          current: ["wind_speed_10m", "temperature_2m", "relative_humidity_2m","precipitation"],
+          current: ["wind_speed_10m", "temperature_2m", "relative_humidity_2m","precipitation", "apparent_temperature"],
         }
         const fetchdata = async () => {
             const responses = await fetchWeatherApi(url,fetch_current_params);
@@ -243,6 +321,7 @@ export default function App(){
                 temperature_2m: current.variables(1)!.value(),
                 relative_humidity_2m: current.variables(2)!.value(),
                 precipitation: current.variables(3)!.value(),
+                apparent_temperature: current.variables(4)!.value(),
               },
             }
             // set weather_place 
