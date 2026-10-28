@@ -45,10 +45,20 @@ function Select_Place({place,setweatherplace,setplacelist, setnameweather}){
         const current = response.current()!;
         const daily = response.daily()!;
         const hourly = response.hourly()!;
+        console.log("hourly is ",Number(hourly.timeEnd()));
         const utcOffsetSeconds = response.utcOffsetSeconds();
+        const hourly_time = Array.from(
+          {length: (Number(hourly.timeEnd()) - Number(hourly.time())) / hourly.interval() },
+          (_ , i ) => new Date((Number(hourly.time()) + i * hourly.interval() + utcOffsetSeconds)*1000).toString()
+        );
+        const hourly_temp_2m = hourly.variables(0)!.valuesArray();
+        console.log("hourly_time is ",hourly_time);
+        const hourly_data = {};
+        hourly_time.forEach((time,i) => hourly_data[time] = hourly_temp_2m[i]);
         const weatherData ={
           current: {
               time: new Date((Number(current?.time()) + utcOffsetSeconds) * 1000),
+              hourly: new Date((Number(current?.time()) + utcOffsetSeconds) * 1000) ,
               wind_speed_10m: current.variables(0)!.value(),
               temperature_2m: current.variables(1)!.value(),
               relative_humidity_2m: current.variables(2)!.value(),
@@ -57,13 +67,9 @@ function Select_Place({place,setweatherplace,setplacelist, setnameweather}){
           }, 
           hourly: {
             // 168 entries -> 24 hours * 7 = 168
-            // 7 days perspective is taken from whenever search is done
-              time: new Set(Array.from(
-                {length: (Number(hourly.timeEnd()) - Number(hourly.time())) / hourly.interval()},
-                (_ , i ) => new Date((Number(hourly.time()) + i * hourly.interval() + utcOffsetSeconds)*1000).toString()
-              )),
-              temperature_2m: hourly.variables(0)!.valuesArray(),
-          },
+            // 7 days persjpective is taken from whenever search is done
+              time : hourly_data,
+            },
           daily:{
             time: Array.from(
               {length: (Number(daily.timeEnd()) - Number(daily.time())) / daily.interval()},
@@ -223,7 +229,7 @@ const pictures = {
   "Light freezing rain" : "../assets/images/icon-rain.webp",
   "Heavy freezing rain" : "../assets/images/icon-rain.webp",
   "Slight rain showers" : "../assets/images/icon-rain.webp",
-  "Moderate rain showers" : "../assets/imagses/icon-rain.webp",
+  "Moderate rain showers" : "../assets/images/icon-rain.webp",
   "Violent rain showers" : "../assets/images/icon-rain.webp",
   "Slight snowfall" : "../assets/images/icon-snow.webp",
   "Moderate snowfall" : "../assets/images/icon-snow.webp",
@@ -254,8 +260,8 @@ const pictures = {
           <p>{days[weatherdata.daily.time[index].getDay()]}</p>
           <img src={pictures[weather_codes_name[weatherdata.daily.weather_code[index].toString()]]} />
           <div>
-            <p>{weatherdata.daily.temperature_2m_max[index]}</p>
-            <p>{weatherdata.daily.temperature_2m_min[index]}</p>
+            <p>{`${weatherdata.daily.temperature_2m_max[index].toFixed(2)}^`}</p>
+            <p>{`${weatherdata.daily.temperature_2m_min[index].toFixed(2)}^`}</p>
           </div>
         </div>
       )) : ""}
@@ -275,10 +281,133 @@ function Display_left({weather_data}){
   )
 }
 // feature: display_right
-function Display_right(){
+function Display_right({weather_data}){
+  const [loop , setLoop] = useState(0);
+  const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const time_am_pm = {
+      '0' : "12 AM",
+      '1' : "1 AM",
+      '2' : "2 AM",
+      '3' : "3 AM",
+      '4' : "4 AM",
+      '5' : "5 AM",
+      '6' : "6 AM",
+      '7' : "7 AM",
+      '8' : "8 AM",
+      '9' : "9 AM",
+      '10' : "10 AM",
+      '11' : "11 AM",
+      '12' : "12 PM",
+      '13' : "1 PM",
+      '14' : "2 PM",
+      '15' : "3 PM",
+      '16' : "4 PM",
+      '17' : "5 PM",
+      '18' : "6 PM",
+      '19' : "7 PM",
+      '20' : "8 PM",
+      '21' : "9 PM",
+      '22' : "10 PM",
+      '23' : "11 PM", 
+  }
+  const time_remaining = {
+      '0' : 24,
+      '1' : 23,
+      '2' : 22,
+      '3' : 21,
+      '4' : 20,
+      '5' : 19,
+      '6' : 18,
+      '7' : 17,
+      '8' : 16,
+      '9' : 15,
+      '10' : 14,
+      '11' : 13,
+      '12' : 12,
+      '13' : 11,
+      '14' : 10,
+      '15' : 9,
+      '16' : 8,
+      '17' : 7,
+      '18' : 6,
+      '19' : 5,
+      '20' : 4,
+      '21' : 3,
+      '22': 2,
+      '23' : 1,
+      '24' : 0,
+}
+  const options = [];
+  const [ useDay , setDay ] = useState(""); // monday, tuesday, wednesday
+  const [ loopstarted , setLoopstarted ] = useState(false); // for automatic logic lock
+  const [ is_hourly_forecast , set_hourly_forecast ] =  useState(false);
+  const [data , setData] = useState([]);
+  if(weather_data.current){
+    for(let i = 0 ; i<=6 ; i++){
+        options.push(<option className="text-black" key={`${i}`}> {`${days[((weather_data.current.time.getDay()) + i) % 7]}`}</option>)
+    }
+    if(useDay == ""){
+      setDay(days[weather_data.current.time.getDay()]);
+      console.log("options are ",options);
+    }
+  };
+  // loop to create hourly forecast
+  if(is_hourly_forecast){
+    const hourly_forecast = [];
+    for(let i = 0; i<=loop; i++){
+      // index will be weather_data.current.hourly
+      hourly_forecast.push(<div key={`${i}`}><h3>`${time_am_pm[weather_data.current.hourly.getHours()]}`</h3><p>`${weather_data.hourly.time[weather_data.current.hourly.toString()]}`</p></div>); // setLoopStarted -> false
+      //increment index
+      weather_data.current.hourly.setMinutes(weather_data.current.hourly.getMinutes() + 30);
+    }
+    set_hourly_forecast(false);
+    setData(hourly_forecast);
+  }
+
+  useEffect(()=>{
+    if(useDay != ""){  // monday ,tuesday ,wednesday
+      if(!loopstarted){ // init: false; when other states are triggered by automatic system to avoid unnecessary trigger
+        if(weather_data.current.hourly.toString() in weather_data.hourly.time){
+            // set loop number
+            setLoop(weather_data.current.hourly.getHours());
+
+        }else{
+          while(!(weather_data.current.hourly.toString() in weather_data.hourly.time)){
+              // subtract 15 mins from the current time 
+              weather_data.current.hourly.setMinutes(weather_data.current.hourly.getMinutes() - 15);
+          }
+          setLoop(weather_data.current.hourly.getHours());
+        }
+        setLoopstarted(true);
+        set_hourly_forecast(true);
+
+        // automatic change after 1 hour
+      const start_timer = setInterval(() => {
+            // set loop number after every 1 hour
+            setLoop(e => e - 1);
+            // set the new time index
+            weather_data.current.hourly.setMinutes(weather_data.current.hourly.getMinutes() + 60);
+      },60 * 60 * 1000);
+
+    return () =>{
+      clearInterval(start_timer);
+    }
+  }
+
+    }
+  
+  },[useDay,loopstarted]);
   return(
     <div>
-
+        { weather_data.hourly ? (
+        <div>
+          <h2>Hourly forecast</h2>
+          <select className="text-black" name="day">
+            {options}
+          </select>
+          {data}
+        </div> 
+        ) : ""}
     </div>
   )
 }
@@ -288,7 +417,7 @@ function Display({weather_data}){
   return(
     <div>
         <Display_left weather_data={weather_data}></Display_left>
-        <Display_right></Display_right>
+        <Display_right weather_data={weather_data}></Display_right>
     </div>
   )
 }
