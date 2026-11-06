@@ -311,31 +311,30 @@ function Display_right({weather_data}){
       '23' : "11 PM", 
   }
   const time_remaining = {
-      '0' : 24,
-      '1' : 23,
-      '2' : 22,
-      '3' : 21,
-      '4' : 20,
-      '5' : 19,
-      '6' : 18,
-      '7' : 17,
-      '8' : 16,
-      '9' : 15,
-      '10' : 14,
-      '11' : 13,
-      '12' : 12,
-      '13' : 11,
-      '14' : 10,
-      '15' : 9,
-      '16' : 8,
-      '17' : 7,
-      '18' : 6,
-      '19' : 5,
-      '20' : 4,
-      '21' : 3,
-      '22': 2,
-      '23' : 1,
-      '24' : 0,
+      '0' : 23,
+      '1' : 22,
+      '2' : 21,
+      '3' : 20,
+      '4' : 19,
+      '5' : 18,
+      '6' : 17,
+      '7' : 16,
+      '8' : 15,
+      '9' : 14,
+      '10' : 13,
+      '11' : 12,
+      '12' : 11,
+      '13' : 10,
+      '14' : 9,
+      '15' : 8,
+      '16' : 7,
+      '17' : 6,
+      '18' : 5,
+      '19' : 4,
+      '20' : 3,
+      '21' : 2,
+      '22': 1,
+      '23' : 0,
 }
   const options = [];
   const [ useDay , setDay ] = useState(""); // monday, tuesday, wednesday
@@ -351,48 +350,77 @@ function Display_right({weather_data}){
       console.log("options are ",options);
     }
   };
+
   // loop to create hourly forecast
   if(is_hourly_forecast){
     const hourly_forecast = [];
-    for(let i = 0; i<=loop; i++){
+    let new_date = new Date(weather_data.current.time.getTime()).getHours();
+    console.log("new_date is ",new_date);
+    console.log("loop inside if is ",loop);
+    // const current_date = 0;
+    for(let i = 0; i <= loop; i++){
       // index will be weather_data.current.hourly
-      hourly_forecast.push(<div key={`${i}`}><h3>`${time_am_pm[weather_data.current.hourly.getHours()]}`</h3><p>`${weather_data.hourly.time[weather_data.current.hourly.toString()]}`</p></div>); // setLoopStarted -> false
+      // if(weather_data.current.time.getMinutes() < 30){
+      //   new_date.setMinutes(new_date.getMinutes() + 15);
+      // }else{
+      //   new_date.setMinutes(new_date.getMinutes() - 15);
+      // }
+      hourly_forecast.push(<div key={`${i}`}><h3>{`${time_am_pm[new_date]}`}</h3><p>{`${weather_data.hourly.time[weather_data.current.hourly.toString()].toFixed(2)}`}^</p></div>); // setLoopStarted -> false
       //increment index
-      weather_data.current.hourly.setMinutes(weather_data.current.hourly.getMinutes() + 30);
+      // weather_data.current.hourly.setMinutes(weather_data.current.hourly.getMinutes() + 60);
+      new_date++;
+      console.log("weather_data as index is ",weather_data.current.hourly);
     }
+    console.log("hourly_forecast is ",hourly_forecast);
     set_hourly_forecast(false);
     setData(hourly_forecast);
   }
 
   useEffect(()=>{
     if(useDay != ""){  // monday ,tuesday ,wednesday
-      if(!loopstarted){ // init: false; when other states are triggered by automatic system to avoid unnecessary trigger
+      if(!loopstarted){
+        // init: false; when other states are triggered by automatic system to avoid unnecessary trigger
         if(weather_data.current.hourly.toString() in weather_data.hourly.time){
-            // set loop number
-            setLoop(weather_data.current.hourly.getHours());
-
-        }else{
-          while(!(weather_data.current.hourly.toString() in weather_data.hourly.time)){
-              // subtract 15 mins from the current time 
-              weather_data.current.hourly.setMinutes(weather_data.current.hourly.getMinutes() - 15);
+          // set loop number
+          setLoop(time_remaining[weather_data.current.hourly.getHours()]);
+          console.log("remaning time is ",weather_data.current.hourly.getHours());
+        } else {
+          while (
+            !(
+              weather_data.current.hourly.toString() in weather_data.hourly.time
+            )
+          ) {
+            // subtract 15 mins from the current time
+            weather_data.current.hourly.setMinutes(
+              weather_data.current.hourly.getMinutes() - 15,
+            );
           }
-          setLoop(weather_data.current.hourly.getHours());
+          setLoop(time_remaining[weather_data.current.hourly.getHours()]);
+          console.log("remaning time is ",time_remaining[weather_data.current.hourly.getHours()]);
         }
+        console.log("UseEffect ran Display_right()");
         setLoopstarted(true);
         set_hourly_forecast(true);
 
-        // automatic change after 1 hour
-      const start_timer = setInterval(() => {
+        // automatic change after 1 hour5r*96'
+        const start_timer = setInterval(
+          () => {
             // set loop number after every 1 hour
-            setLoop(e => e - 1);
+            setLoop((e) => e - 1);
+            console.log("timer ran -------------------->");
+            set_hourly_forecast(true);
             // set the new time index
-            weather_data.current.hourly.setMinutes(weather_data.current.hourly.getMinutes() + 60);
-      },60 * 60 * 1000);
+            weather_data.current.hourly.setMinutes(
+              weather_data.current.hourly.getMinutes() + 60,
+            );
+          },
+        60000,
+        );
 
-    return () =>{
-      clearInterval(start_timer);
-    }
-  }
+        return () => {
+          clearInterval(start_timer);
+        };
+      }
 
     }
   
@@ -457,7 +485,7 @@ export default function App(){
             setWeatherPlace({...weather_place,current:current_data.current});
         };
         fetchdata();
-        console.log("useEffect ran");
+        console.log("useEffect ran App()");
         console.log("weather_place_is ",weather_place);
         console.log("current_weather_name ",current_weather_name);
         
