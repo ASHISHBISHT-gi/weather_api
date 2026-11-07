@@ -338,7 +338,8 @@ function Display_right({weather_data}){
 }
   const options = [];
   const [ useDay , setDay ] = useState(""); // monday, tuesday, wednesday
-  const [ loopstarted , setLoopstarted ] = useState(false); // for automatic logic lock
+  // const [ loopstarted , setLoopstarted ] = useState(false); // for automatic logic lock
+  const loopstartedRef = useRef(false);
   const [ is_hourly_forecast , set_hourly_forecast ] =  useState(false);
   const [data , setData] = useState([]);
   if(weather_data.current){
@@ -357,6 +358,7 @@ function Display_right({weather_data}){
     let new_date = new Date(weather_data.current.time.getTime()).getHours();
     console.log("new_date is ",new_date);
     console.log("loop inside if is ",loop);
+    console.log("weather_data inside for loop is ",weather_data);
     // const current_date = 0;
     for(let i = 0; i <= loop; i++){
       // index will be weather_data.current.hourly
@@ -365,6 +367,9 @@ function Display_right({weather_data}){
       // }else{
       //   new_date.setMinutes(new_date.getMinutes() - 15);
       // }
+      console.log("for loop index is ",i);
+      console.log("time_am_pm is ",time_am_pm[new_date]);
+      console.log("current hourly is  ",weather_data.current.hourly)
       hourly_forecast.push(<div key={`${i}`}><h3>{`${time_am_pm[new_date]}`}</h3><p>{`${weather_data.hourly.time[weather_data.current.hourly.toString()].toFixed(2)}`}^</p></div>); // setLoopStarted -> false
       //increment index
       // weather_data.current.hourly.setMinutes(weather_data.current.hourly.getMinutes() + 60);
@@ -378,7 +383,7 @@ function Display_right({weather_data}){
 
   useEffect(()=>{
     if(useDay != ""){  // monday ,tuesday ,wednesday
-      if(!loopstarted){
+      if(!loopstartedRef.current){
         // init: false; when other states are triggered by automatic system to avoid unnecessary trigger
         if(weather_data.current.hourly.toString() in weather_data.hourly.time){
           // set loop number
@@ -399,7 +404,8 @@ function Display_right({weather_data}){
           console.log("remaning time is ",time_remaining[weather_data.current.hourly.getHours()]);
         }
         console.log("UseEffect ran Display_right()");
-        setLoopstarted(true);
+        // setLoopstarted(true);
+        loopstartedRef.current = true;
         set_hourly_forecast(true);
 
         // automatic change after 1 hour5r*96'
@@ -410,11 +416,11 @@ function Display_right({weather_data}){
             console.log("timer ran -------------------->");
             set_hourly_forecast(true);
             // set the new time index
-            weather_data.current.hourly.setMinutes(
-              weather_data.current.hourly.getMinutes() + 60,
-            );
+            // weather_data.current.hourly.setMinutes(
+            //   weather_data.current.hourly.getMinutes() + 60,
+            // );
           },
-        60000,
+        30000,
         );
 
         return () => {
@@ -424,7 +430,7 @@ function Display_right({weather_data}){
 
     }
   
-  },[useDay,loopstarted]);
+  },[useDay]);
   return(
     <div>
         { weather_data.hourly ? (
