@@ -156,28 +156,29 @@ function Country({weatherdata}){
       {/* country info and weather */}
       <section>
         <div>
-          { weatherdata.place ? <h1>{` ${weatherdata.place.name}, ${weatherdata.place.country}`} </h1>: "" }
-          <p>{weatherdata.current ? weatherdata.current.time.toString() : "data not found"}</p>
+          { weatherdata.place ? <h1>{` ${weatherdata.place.name}, ${weatherdata.place.country}`} </h1>: "Berlin, Germany" }
+          <p>{weatherdata.current ? weatherdata.current.time.toString() : "Tuesday, Aug 5, 2025"}</p>
         </div>
-        { weatherdata.current ? <h1>{`${weatherdata.current.temperature_2m.toFixed(2)}^`}</h1> : ""}
+        { weatherdata.current ? <h1>{`${weatherdata.current.temperature_2m.toFixed(2)}^`}</h1> : "68^"}
       </section>
 
       {/* country weather attributes */}
-      <section>
-        <div>
-        { weatherdata.current ? <><p>Feels Like</p> <h2>{`${weatherdata.current.apparent_temperature.toFixed(2)}^`}</h2> </> : "" }
+      <section className="flex max-sm:flex max-sm:flex-wrap">
+        <div className="max-sm:basis-1/2 max-sm:grow">
+          <p>Feels Like</p>
+        { weatherdata.current ? <h2>{`${weatherdata.current.apparent_temperature.toFixed(2)}^`}</h2> : "64^" }
         </div>
-        <div>
+        <div className="max-sm:basis-1/2 max-sm:grow">
           <p>Humidity</p>
-        { weatherdata.current ?  <h2>{`${weatherdata.current.relative_humidity_2m}%`}</h2> : "" } 
+        { weatherdata.current ?  <h2>{`${weatherdata.current.relative_humidity_2m}%`}</h2> : "46%" } 
         </div>
-        <div>
+        <div className="max-sm:basis-1/2 max-sm:grow">
           <p>Wind</p>
-        { weatherdata.current ?  <h2>{`${weatherdata.current.wind_speed_10m} mph`}</h2> : ""}
+        { weatherdata.current ?  <h2>{`${weatherdata.current.wind_speed_10m} mph`}</h2> : "9mph"}
         </div>
-        <div>
+        <div className="max-sm:basis-1/2 max-sm:grow">
           <p>Precipitation</p>
-        { weatherdata.current ? <h2> {`${weatherdata.current.precipitation} in`} </h2> : ""}
+        { weatherdata.current ? <h2> {`${weatherdata.current.precipitation} in`} </h2> : "0 in"}
         </div>
       </section>
     </div>
