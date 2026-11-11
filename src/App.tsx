@@ -33,7 +33,7 @@ function Select_Place({place,setweatherplace,setplacelist, setnameweather}){
         hourly:"temperature_2m",
         daily: ["temperature_2m_max" , "temperature_2m_min", "weather_code"],
         models:"dwd_icon_seamless",
-        current: ["wind_speed_10m", "temperature_2m", "relative_humidity_2m", "precipitation", "apparent_temperature"],
+        current: ["wind_speed_10m", "temperature_2m", "relative_humidity_2m", "precipitation", "apparent_temperature","weather_code"],
         forecast_days: 7,
 };
     const onSelectPlace= async (e) => {
@@ -64,6 +64,7 @@ function Select_Place({place,setweatherplace,setplacelist, setnameweather}){
               relative_humidity_2m: current.variables(2)!.value(),
               precipitation: current.variables(3)!.value(),
               apparent_temperature: current.variables(4)!.value(),
+              weather_code: current.variables(5)!.value(),
           },
           index_time : new Date((Number(current?.time()) + utcOffsetSeconds) * 1000),
           hourly: {
@@ -150,35 +151,37 @@ function SearchPlaces({setplace, setcurrentweathername}){
 }
 
 // feature: country_info
-function Country({weatherdata}){
+function Country({weatherdata,weather_codes_name,pictures}){
   return(
-    <div>
+    <div className="border flex flex-col gap-5 border-green-200 text-[18px]">
       {/* country info and weather */}
-      <section>
-        <div>
-          { weatherdata.place ? <h1>{` ${weatherdata.place.name}, ${weatherdata.place.country}`} </h1>: "Berlin, Germany" }
+      <section className="flex justify-center h-[19rem] border box-border max-sm:flex-col max-sm:pl-7 max-sm:pr-7 max-sm:bg-[url('../assets/images/bg-today-small.svg')] bg-[url('../assets/images/bg-today-large.svg')] bg-cover rounded-3xl">
+        <div className="border max-sm:flex max-sm:flex-col max-sm:items-center">
+          { weatherdata.place ? <h1>{` ${weatherdata.place.name}, ${weatherdata.place.country}`} </h1>: <h1 className="text-[2rem]">Berlin, Germany</h1> }
           <p>{weatherdata.current ? weatherdata.current.time.toString() : "Tuesday, Aug 5, 2025"}</p>
         </div>
-        { weatherdata.current ? <h1>{`${weatherdata.current.temperature_2m.toFixed(2)}^`}</h1> : "68^"}
+        <div className="border flex justify-between items-center ">
+        { weatherdata.current ? <><img className="aspect-square w-[40%]" src={pictures[weather_codes_name[weatherdata.current.weather_code.toString()]]} alt="current_temp" /> <h1 className="text-[5rem]">{`${weatherdata.current.temperature_2m.toFixed(0)}^`}</h1></> : <h1 className="text-[5rem]">68^</h1>}
+        </div>
       </section>
 
       {/* country weather attributes */}
-      <section className="flex max-sm:flex max-sm:flex-wrap">
-        <div className="max-sm:basis-1/2 max-sm:grow">
+      <section className="flex gap-4 max-sm:flex max-sm:flex-wrap ">
+        <div className="border rounded-xl pt-2 pb-2 pl-4 box-border max-sm:basis-1/3 max-sm:flex-grow">
           <p>Feels Like</p>
-        { weatherdata.current ? <h2>{`${weatherdata.current.apparent_temperature.toFixed(2)}^`}</h2> : "64^" }
+        { weatherdata.current ? <h1 className="text-[2rem]">{`${weatherdata.current.apparent_temperature.toFixed(0)}^`}</h1> : "64^" }
         </div>
-        <div className="max-sm:basis-1/2 max-sm:grow">
+        <div className="border rounded-xl pt-2 pb-2 pl-4 box-border max-sm:basis-1/3 max-sm:flex-grow">
           <p>Humidity</p>
-        { weatherdata.current ?  <h2>{`${weatherdata.current.relative_humidity_2m}%`}</h2> : "46%" } 
+        { weatherdata.current ?  <h1 className="text-[2rem]">{`${weatherdata.current.relative_humidity_2m}%`}</h1> : "46%" } 
         </div>
-        <div className="max-sm:basis-1/2 max-sm:grow">
+        <div className="border rounded-xl pt-2 pb-2 pl-4 box-border max-sm:basis-1/3 max-sm:flex-grow">
           <p>Wind</p>
-        { weatherdata.current ?  <h2>{`${weatherdata.current.wind_speed_10m} mph`}</h2> : "9mph"}
+        { weatherdata.current ?  <h1 className="text-[2rem]">{`${weatherdata.current.wind_speed_10m.toFixed(0)} mph`}</h1> : "9mph"}
         </div>
-        <div className="max-sm:basis-1/2 max-sm:grow">
+        <div className="border rounded-xl pt-2 pb-2 pl-4 box-border max-sm:basis-1/3 max-sm:flex-grow">
           <p>Precipitation</p>
-        { weatherdata.current ? <h2> {`${weatherdata.current.precipitation} in`} </h2> : "0 in"}
+        { weatherdata.current ? <h1 className="text-[2rem]"> {`${weatherdata.current.precipitation} in`} </h1> : "0 in"}
         </div>
       </section>
     </div>
@@ -186,84 +189,85 @@ function Country({weatherdata}){
 }
 
 // feature: daily_forecast
-function Forecast({weatherdata}){
+function Forecast({weatherdata,weather_codes_name,pictures}){
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const weather_codes_name = {
-	"0": "Clear sky",
-	"1": "Mainly clear",
-	"2": "Partly cloudy",
-	"3": "Overcast",
-	"45": "Fog",
-	"48": "Depositing rime fog",
-	"51": "Light drizzle",
-	"53": "Moderate drizzle",
-	"55": "Dense drizzle",
-	"56": "Light freezing drizzle",
-	"57": "Dense freezing drizzle",
-	"61": "Slight rain",
-	"63": "Moderate rain",
-	"65": "Heavy rain",
-	"66": "Light freezing rain",
-	"67": "Heavy freezing rain",
-	"71": "Slight snowfall",
-	"73": "Moderate snowfall",
-	"75": "Heavy snowfall",
-	"77": "Snow grains",
-	"80": "Slight rain showers",
-	"81": "Moderate rain showers",
-	"82": "Violent rain showers",
-	"85": "Slight snow showers",
-	"86": "Heavy snow showers",
-	"95": "Thunderstorm",
-	"96": "Thunderstorm with slight hail",
-	"97": "Heavy thunderstorm",
-	"99": "Thunderstorm with heavy hail"
-};
-const pictures = {
-  "Light drizzle" : "../assets/images/icon-drizzle.webp",
-  "Moderate drizzle" : "../assets/images/icon-drizzle.webp",
-  "Dense drizzle" : "../assets/images/icon-drizzle.webp",
-  "Light freezing drizzle" : "../assets/images/icon-drizzle.webp",
-  "Dense freezing drizzle" : "../assets/images/icon-drizzle.webp",
-  "slight rain" : "../assets/images/icon-rain.webp",
-  "Moderate rain" : "../assets/images/icon-rain.webp",
-  "Heavy rain" : "../assets/images/icon-rain.webp",
-  "Light freezing rain" : "../assets/images/icon-rain.webp",
-  "Heavy freezing rain" : "../assets/images/icon-rain.webp",
-  "Slight rain showers" : "../assets/images/icon-rain.webp",
-  "Moderate rain showers" : "../assets/images/icon-rain.webp",
-  "Violent rain showers" : "../assets/images/icon-rain.webp",
-  "Slight snowfall" : "../assets/images/icon-snow.webp",
-  "Moderate snowfall" : "../assets/images/icon-snow.webp",
-  "Heavy snowfall" : "../assets/images/icon-snow.webp",
-  "Snow grains" : "../assets/images/icon-snow.webp",
-  "Slight snow showers" : "../assets/images/icon-snow.webp",
-  "Heavy snow showers" : "../assets/images/icon-snow.webp",
-  "Thunderstorm" : "../assets/images/icon-storm.webp",
-  "Thunderstorm with slight hail" : "../assets/images/icon-storm.webp",
-  "Heavy thunderstorm" : "../assets/images/icon-storm.webp",
-  "Thunderstorm with heavy hail" : "../assets/images/icon-storm.webp",
-  "Fog" : "../assets/images/icon-fog.webp",
-  "Depositing rime fog" : "../assets/images/icon-fog.webp",
-  "Overcast" : "../assets/images/icon-overcast.webp",
-  "Partly cloudy" : "../assets/images/icon-partly-cloudy.webp",
-  "Clear sky" : "../assets/images/icon-sunny.webp",
-  "Mainly clear" : "../assets/images/icon-sunny.webp"
-}
+//   const weather_codes_name = {
+// 	"0": "Clear sky",
+// 	"1": "Mainly clear",
+// 	"2": "Partly cloudy",
+// 	"3": "Overcast",
+// 	"45": "Fog",
+// 	"48": "Depositing rime fog",
+// 	"51": "Light drizzle",
+// 	"53": "Moderate drizzle",
+// 	"55": "Dense drizzle",
+// 	"56": "Light freezing drizzle",
+// 	"57": "Dense freezing drizzle",
+// 	"61": "Slight rain",
+// 	"63": "Moderate rain",
+// 	"65": "Heavy rain",
+// 	"66": "Light freezing rain",
+// 	"67": "Heavy freezing rain",
+// 	"71": "Slight snowfall",
+// 	"73": "Moderate snowfall",
+// 	"75": "Heavy snowfall",
+// 	"77": "Snow grains",
+// 	"80": "Slight rain showers",
+// 	"81": "Moderate rain showers",
+// 	"82": "Violent rain showers",
+// 	"85": "Slight snow showers",
+// 	"86": "Heavy snow showers",
+// 	"95": "Thunderstorm",
+// 	"96": "Thunderstorm with slight hail",
+// 	"97": "Heavy thunderstorm",
+// 	"99": "Thunderstorm with heavy hail"
+// };
+
+// const pictures = {
+//   "Light drizzle" : "../assets/images/icon-drizzle.webp",
+//   "Moderate drizzle" : "../assets/images/icon-drizzle.webp",
+//   "Dense drizzle" : "../assets/images/icon-drizzle.webp",
+//   "Light freezing drizzle" : "../assets/images/icon-drizzle.webp",
+//   "Dense freezing drizzle" : "../assets/images/icon-drizzle.webp",
+//   "slight rain" : "../assets/images/icon-rain.webp",
+//   "Moderate rain" : "../assets/images/icon-rain.webp",
+//   "Heavy rain" : "../assets/images/icon-rain.webp",
+//   "Light freezing rain" : "../assets/images/icon-rain.webp",
+//   "Heavy freezing rain" : "../assets/images/icon-rain.webp",
+//   "Slight rain showers" : "../assets/images/icon-rain.webp",
+//   "Moderate rain showers" : "../assets/images/icon-rain.webp",
+//   "Violent rain showers" : "../assets/images/icon-rain.webp",
+//   "Slight snowfall" : "../assets/images/icon-snow.webp",
+//   "Moderate snowfall" : "../assets/images/icon-snow.webp",
+//   "Heavy snowfall" : "../assets/images/icon-snow.webp",
+//   "Snow grains" : "../assets/images/icon-snow.webp",
+//   "Slight snow showers" : "../assets/images/icon-snow.webp",
+//   "Heavy snow showers" : "../assets/images/icon-snow.webp",
+//   "Thunderstorm" : "../assets/images/icon-storm.webp",
+//   "Thunderstorm with slight hail" : "../assets/images/icon-storm.webp",
+//   "Heavy thunderstorm" : "../assets/images/icon-storm.webp",
+//   "Thunderstorm with heavy hail" : "../assets/images/icon-storm.webp",
+//   "Fog" : "../assets/images/icon-fog.webp",
+//   "Depositing rime fog" : "../assets/images/icon-fog.webp",
+//   "Overcast" : "../assets/images/icon-overcast.webp",
+//   "Partly cloudy" : "../assets/images/icon-partly-cloudy.webp",
+//   "Clear sky" : "../assets/images/icon-sunny.webp",
+//   "Mainly clear" : "../assets/images/icon-sunny.webp"
+// }
   return(
-    <div>
-      <h3>Daily forecast</h3>
+    <div className="border-2 border-yellow-500">
+      <h3 className="mb-3 text-[1.2rem]">Daily forecast</h3>
       {/* week_forecast */}
-      <section>
+      <section className="flex gap-3 max-sm:flex max-sm:flex-wrap">
         { /* task: for loop to display weeks data */ }
         
       { weatherdata.daily ? (weatherdata.daily.time.map((time , index) => 
-        <div key={time.toString()+index}>
+        <div key={time.toString()+index} className="flex rounded-xl bg-[#25253f] pt-2 pb-2 flex-col items-center max-sm:w-[30%] border">
           <p>{days[weatherdata.daily.time[index].getDay()]}</p>
-          <img src={pictures[weather_codes_name[weatherdata.daily.weather_code[index].toString()]]} />
-          <div>
-            <p>{`${weatherdata.daily.temperature_2m_max[index].toFixed(2)}^`}</p>
-            <p>{`${weatherdata.daily.temperature_2m_min[index].toFixed(2)}^`}</p>
+          <img className="aspect-square w-[70%]" src={pictures[weather_codes_name[weatherdata.daily.weather_code[index].toString()]]} />
+          <div className="flex justify-around border w-full ">
+            <p>{`${weatherdata.daily.temperature_2m_max[index].toFixed(0)}^`}</p>
+            <p>{`${weatherdata.daily.temperature_2m_min[index].toFixed(0)}^`}</p>
           </div>
         </div>
       )) : ""}
@@ -274,16 +278,16 @@ const pictures = {
 }
 
 // feature: display_left
-function Display_left({weather_data}){
+function Display_left({weather_data,weather_codes_name,pictures}){
   return(
-    <div>
-      <Country weatherdata={weather_data}></Country>
-      <Forecast weatherdata={weather_data}></Forecast>
+    <div className="flex flex-col gap-8">
+      <Country weatherdata={weather_data} weather_codes_name={weather_codes_name} pictures={pictures}></Country>
+      <Forecast weatherdata={weather_data} weather_codes_name={weather_codes_name} pictures={pictures}></Forecast>
     </div>
   )
 }
 // feature: display_right
-function Display_right({weather_data}){
+function Display_right({weather_data,pictures}){
   const [loop , setLoop] = useState(0);
   const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
   const time_am_pm = {
@@ -347,7 +351,7 @@ function Display_right({weather_data}){
   const [data , setData] = useState([]);
   if(weather_data.current){
     for(let i = 0 ; i<=6 ; i++){
-        options.push(<option className="text-black" key={`${i}`}> {`${days[((weather_data.current.time.getDay()) + i) % 7]}`}</option>)
+        options.push(<option className="text-black " key={`${i}`}> {`${days[((weather_data.current.time.getDay()) + i) % 7]}`}</option>)
     }
     if(useDay == ""){
       setDay(days[weather_data.current.time.getDay()]);
@@ -373,7 +377,7 @@ function Display_right({weather_data}){
       console.log("for loop index is ",i);
       console.log("time_am_pm is ",time_am_pm[new_date]);
       console.log("current hourly is  ",weather_data.index_time)
-      hourly_forecast.push(<div key={`${i}`}><h3>{`${time_am_pm[new_date]}`}</h3><p>{`${weather_data.hourly.time[weather_data.index_time.toString()].toFixed(2)}`}^</p></div>); // setLoopStarted -> false
+      hourly_forecast.push(<div className="border bg-[#2f2f49] rounded-md flex justify-between box-border p-3 pl-4 pr-4" key={`${i}`}><h3>{`${time_am_pm[new_date]}`}</h3><p>{`${weather_data.hourly.time[weather_data.index_time.toString()].toFixed(0)}`}^</p></div>); // setLoopStarted -> false
       //increment index
       // weather_data.current.hourly.setMinutes(weather_data.current.hourly.getMinutes() + 60);
       new_date++;
@@ -436,14 +440,18 @@ function Display_right({weather_data}){
   
   },[useDay]);
   return(
-    <div>
+    <div className="bg-[#252541] rounded-xl pb-3">
         { weather_data.hourly ? (
-        <div>
-          <h2>Hourly forecast</h2>
-          <select className="text-black" name="day">
+        <div className="box-border p-4 ">
+        <section className="flex justify-between mb-3">
+          <h2 className="text-[1.2rem]">Hourly forecast</h2>
+          <select className="bg-[#3c3b5d] text-[13px] box-border p-2 pl-3 pr-1 rounded-md" name="day">
             {options}
           </select>
+        </section>
+        <div className="flex flex-col gap-3">
           {data}
+        </div>
         </div> 
         ) : ""}
     </div>
@@ -452,10 +460,72 @@ function Display_right({weather_data}){
 
 // feature: display
 function Display({weather_data}){
+    const weather_codes_name = {
+        "0": "Clear sky",
+	      "1": "Mainly clear",
+	      "2": "Partly cloudy",
+	      "3": "Overcast",
+	      "45": "Fog",
+	      "48": "Depositing rime fog",
+	      "51": "Light drizzle",
+	      "53": "Moderate drizzle",
+	      "55": "Dense drizzle",
+	      "56": "Light freezing drizzle",
+	      "57": "Dense freezing drizzle",
+	      "61": "Slight rain",
+	      "63": "Moderate rain",
+	      "65": "Heavy rain",
+	      "66": "Light freezing rain",
+	      "67": "Heavy freezing rain",
+	      "71": "Slight snowfall",
+	      "73": "Moderate snowfall",
+	      "75": "Heavy snowfall",
+	      "77": "Snow grains",
+	      "80": "Slight rain showers",
+	      "81": "Moderate rain showers",
+	      "82": "Violent rain showers",
+	      "85": "Slight snow showers",
+	      "86": "Heavy snow showers",
+	      "95": "Thunderstorm",
+	      "96": "Thunderstorm with slight hail",
+	      "97": "Heavy thunderstorm",
+	      "99": "Thunderstorm with heavy hail"
+};
+const pictures = {
+  "Light drizzle" : "../assets/images/icon-drizzle.webp",
+  "Moderate drizzle" : "../assets/images/icon-drizzle.webp",
+  "Dense drizzle" : "../assets/images/icon-drizzle.webp",
+  "Light freezing drizzle" : "../assets/images/icon-drizzle.webp",
+  "Dense freezing drizzle" : "../assets/images/icon-drizzle.webp",
+  "Slight rain" : "../assets/images/icon-rain.webp",
+  "Moderate rain" : "../assets/images/icon-rain.webp",
+  "Heavy rain" : "../assets/images/icon-rain.webp",
+  "Light freezing rain" : "../assets/images/icon-rain.webp",
+  "Heavy freezing rain" : "../assets/images/icon-rain.webp",
+  "Slight rain showers" : "../assets/images/icon-rain.webp",
+  "Moderate rain showers" : "../assets/images/icon-rain.webp",
+  "Violent rain showers" : "../assets/images/icon-rain.webp",
+  "Slight snowfall" : "../assets/images/icon-snow.webp",
+  "Moderate snowfall" : "../assets/images/icon-snow.webp",
+  "Heavy snowfall" : "../assets/images/icon-snow.webp",
+  "Snow grains" : "../assets/images/icon-snow.webp",
+  "Slight snow showers" : "../assets/images/icon-snow.webp",
+  "Heavy snow showers" : "../assets/images/icon-snow.webp",
+  "Thunderstorm" : "../assets/images/icon-storm.webp",
+  "Thunderstorm with slight hail" : "../assets/images/icon-storm.webp",
+  "Heavy thunderstorm" : "../assets/images/icon-storm.webp",
+  "Thunderstorm with heavy hail" : "../assets/images/icon-storm.webp",
+  "Fog" : "../assets/images/icon-fog.webp",
+  "Depositing rime fog" : "../assets/images/icon-fog.webp",
+  "Overcast" : "../assets/images/icon-overcast.webp",
+  "Partly cloudy" : "../assets/images/icon-partly-cloudy.webp",
+  "Clear sky" : "../assets/images/icon-sunny.webp",
+  "Mainly clear" : "../assets/images/icon-sunny.webp"
+}
   return(
     <div>
-        <Display_left weather_data={weather_data}></Display_left>
-        <Display_right weather_data={weather_data}></Display_right>
+        <Display_left weather_data={weather_data} weather_codes_name={weather_codes_name} pictures={pictures}></Display_left>
+        <Display_right weather_data={weather_data} weather_codes_name={weather_codes_name} pictures={pictures}></Display_right>
     </div>
   )
 }
@@ -489,6 +559,7 @@ export default function App(){
                 relative_humidity_2m: current.variables(2)!.value(),
                 precipitation: current.variables(3)!.value(),
                 apparent_temperature: current.variables(4)!.value(),
+                weather_code: current.variables(5)!.value(),
               },
             }
             // set weather_place 
@@ -508,10 +579,10 @@ export default function App(){
       },[ current_weather_name ]);
   
   return<>
-  <main className="bg-[hsl(248,70%,36%)] min-h-[100dvh] text-white box-border
+  <main className="bg-[#02012b] min-h-[100dvh] text-white box-border
   px-[1rem] pt-[1rem] pb-[2rem]">
     <Header></Header>
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col ">
       <SearchPlaces setplace={setWeatherPlace} setcurrentweathername={set_current_weather_name}></SearchPlaces>
       <Display weather_data={weather_place}></Display>
     </div>
