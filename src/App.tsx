@@ -7,7 +7,7 @@ const url = "https://api.open-meteo.com/v1/forecast";
 function Header(){
   return(
     <header>
-      <ul  className="flex justify-between border">
+      <ul  className="flex justify-between ">
         <li><img className="w-[80%] min-w-[131px]" src="./assets/images/logo.svg" alt="logo"/></li>
         
         {/* right side */}
@@ -30,7 +30,7 @@ function Select_Place({place,setweatherplace,setplacelist, setnameweather}){
     const fetch_weather_params = {
         latitude: place.latitude,
         longitude:place.longitude,
-        hourly:"temperature_2m",
+        hourly:["temperature_2m","weather_code"],
         daily: ["temperature_2m_max" , "temperature_2m_min", "weather_code"],
         models:"dwd_icon_seamless",
         current: ["wind_speed_10m", "temperature_2m", "relative_humidity_2m", "precipitation", "apparent_temperature","weather_code"],
@@ -52,9 +52,15 @@ function Select_Place({place,setweatherplace,setplacelist, setnameweather}){
           (_ , i ) => new Date((Number(hourly.time()) + i * hourly.interval() + utcOffsetSeconds)*1000).toString()
         );
         const hourly_temp_2m = hourly.variables(0)!.valuesArray();
+        const hourly_weather_code = hourly.variables(1)!.valuesArray();
         console.log("hourly_time is ",hourly_time);
+        console.log("hourly_weather_code",hourly_weather_code);
         const hourly_data = {};
-        hourly_time.forEach((time,i) => hourly_data[time] = hourly_temp_2m[i]);
+        const hourly_code = {};
+        hourly_time.forEach((time,i) =>{
+          hourly_data[time] = hourly_temp_2m[i];
+          hourly_code[time] = hourly_weather_code[i];
+        });
         const weatherData ={
           current: {
               time: new Date((Number(current?.time()) + utcOffsetSeconds) * 1000),
@@ -71,6 +77,7 @@ function Select_Place({place,setweatherplace,setplacelist, setnameweather}){
             // 168 entries -> 24 hours * 7 = 168
             // 7 days persjpective is taken from whenever search is done
               time : hourly_data,
+              w_code : hourly_code,
             },
           daily:{
             time: Array.from(
@@ -126,16 +133,21 @@ function SearchPlaces({setplace, setcurrentweathername}){
   }
   return(
     // container
-    <div className="border text-center box-border ">
+    <div className="text-center box-border ">
       {/* heading and search input */}
       <h1 className="text-6xl font-[dmsans] box-border px-[0.5rem]
       my-[2rem]">How's the sky looking today?</h1>
-      <form onSubmit={getPlacesHandler} className="border">
-        {/* task: create input state to condition the search result and remove the data */}
-        <input ref={place_ref} className="text-black" type="search"   name="place" placeholder="Search for a place..."/>
-        <button type="submit">Search</button>
-        {/* list all the places */}
 
+      <form onSubmit={getPlacesHandler}>
+        {/* task: create input state to condition the search result and remove the data */}
+        <div className="flex flex-col justify-between gap-3">
+        <div className="flex box-border p-5 pl-6 pr-6 gap-5 bg-[#25253f] rounded-xl">
+          <img src="../assets/images/icon-search.svg" alt="search" />
+          <input ref={place_ref} className="bg-[#25253f] text-[1.3rem] border-none focus:outline-none m-0 h-8" type="search"   name="place" placeholder="Search for a place..."/>
+        </div>
+        <button className="p-5 pl-6 pr-6 rounded-xl bg-[#4657d9] w-full" type="submit">Search</button>
+        {/* list all the places */}
+        </div>
         {/* solved: map inside ternary operator not working */}
         <section>
           {/* list all the places to select by the user */}
@@ -144,7 +156,7 @@ function SearchPlaces({setplace, setcurrentweathername}){
           : ""}
         </section>
       </form>
-      <button onClick={()=>(setTest(test+1), console.log("new_place_ref ", place_ref.current.value))}>{test}</button>
+      {/* <button onClick={()=>(setTest(test+1), console.log("new_place_ref ", place_ref.current.value))}>{test}</button> */}
       {/* { console.log("new_place_ref ",place_ref.current.value) }  */}
     </div>
   )
@@ -152,34 +164,36 @@ function SearchPlaces({setplace, setcurrentweathername}){
 
 // feature: country_info
 function Country({weatherdata,weather_codes_name,pictures}){
+  const daynames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const monthnames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   return(
-    <div className="border flex flex-col gap-5 border-green-200 text-[18px]">
+    <div className="flex flex-col gap-5 text-[18px]">
       {/* country info and weather */}
-      <section className="flex justify-center h-[19rem] border box-border max-sm:flex-col max-sm:pl-7 max-sm:pr-7 max-sm:bg-[url('../assets/images/bg-today-small.svg')] bg-[url('../assets/images/bg-today-large.svg')] bg-cover rounded-3xl">
-        <div className="border max-sm:flex max-sm:flex-col max-sm:items-center">
-          { weatherdata.place ? <h1>{` ${weatherdata.place.name}, ${weatherdata.place.country}`} </h1>: <h1 className="text-[2rem]">Berlin, Germany</h1> }
-          <p>{weatherdata.current ? weatherdata.current.time.toString() : "Tuesday, Aug 5, 2025"}</p>
+      <section className="flex justify-center h-[19rem]  box-border max-sm:flex-col max-sm:pl-7 max-sm:pr-7 max-sm:bg-[url('../assets/images/bg-today-small.svg')] bg-[url('../assets/images/bg-today-large.svg')] bg-cover rounded-3xl">
+        <div className="max-sm:flex max-sm:flex-col max-sm:items-center">
+          { weatherdata.place ? <h1 className="text-[2rem]">{` ${weatherdata.place.name}, ${weatherdata.place.country}`} </h1>: <h1 className="text-[2rem]">Berlin, Germany</h1> }
+          <p>{weatherdata.current ? `${daynames[weatherdata.current.time.getDay()]}, ${monthnames[weatherdata.current.time.getMonth()]} ${weatherdata.current.time.getDate()}, ${weatherdata.current.time.getFullYear()}` : "Tuesday, Aug 5, 2025"}</p>
         </div>
-        <div className="border flex justify-between items-center ">
+        <div className="flex justify-between items-center ">
         { weatherdata.current ? <><img className="aspect-square w-[40%]" src={pictures[weather_codes_name[weatherdata.current.weather_code.toString()]]} alt="current_temp" /> <h1 className="text-[5rem]">{`${weatherdata.current.temperature_2m.toFixed(0)}^`}</h1></> : <h1 className="text-[5rem]">68^</h1>}
         </div>
       </section>
 
       {/* country weather attributes */}
       <section className="flex gap-4 max-sm:flex max-sm:flex-wrap ">
-        <div className="border rounded-xl pt-2 pb-2 pl-4 box-border max-sm:basis-1/3 max-sm:flex-grow">
+        <div className="bg-[#25253f] rounded-xl pt-3 pb-3 pl-5 box-border max-sm:basis-1/3 max-sm:flex-grow">
           <p>Feels Like</p>
         { weatherdata.current ? <h1 className="text-[2rem]">{`${weatherdata.current.apparent_temperature.toFixed(0)}^`}</h1> : "64^" }
         </div>
-        <div className="border rounded-xl pt-2 pb-2 pl-4 box-border max-sm:basis-1/3 max-sm:flex-grow">
+        <div className="bg-[#25253f] rounded-xl pt-3 pb-3 pl-5 box-border max-sm:basis-1/3 max-sm:flex-grow">
           <p>Humidity</p>
         { weatherdata.current ?  <h1 className="text-[2rem]">{`${weatherdata.current.relative_humidity_2m}%`}</h1> : "46%" } 
         </div>
-        <div className="border rounded-xl pt-2 pb-2 pl-4 box-border max-sm:basis-1/3 max-sm:flex-grow">
+        <div className="bg-[#25253f] rounded-xl pt-3 pb-3 pl-5 box-border max-sm:basis-1/3 max-sm:flex-grow">
           <p>Wind</p>
         { weatherdata.current ?  <h1 className="text-[2rem]">{`${weatherdata.current.wind_speed_10m.toFixed(0)} mph`}</h1> : "9mph"}
         </div>
-        <div className="border rounded-xl pt-2 pb-2 pl-4 box-border max-sm:basis-1/3 max-sm:flex-grow">
+        <div className="bg-[#25253f] rounded-xl pt-3 pb-3 pl-5 box-border max-sm:basis-1/3 max-sm:flex-grow">
           <p>Precipitation</p>
         { weatherdata.current ? <h1 className="text-[2rem]"> {`${weatherdata.current.precipitation} in`} </h1> : "0 in"}
         </div>
@@ -215,7 +229,7 @@ function Forecast({weatherdata,weather_codes_name,pictures}){
 // 	"80": "Slight rain showers",
 // 	"81": "Moderate rain showers",
 // 	"82": "Violent rain showers",
-// 	"85": "Slight snow showers",
+// 	"85": "Slight snow showers",SearchP
 // 	"86": "Heavy snow showers",
 // 	"95": "Thunderstorm",
 // 	"96": "Thunderstorm with slight hail",
@@ -255,17 +269,17 @@ function Forecast({weatherdata,weather_codes_name,pictures}){
 //   "Mainly clear" : "../assets/images/icon-sunny.webp"
 // }
   return(
-    <div className="border-2 border-yellow-500">
+    <div>
       <h3 className="mb-3 text-[1.2rem]">Daily forecast</h3>
       {/* week_forecast */}
       <section className="flex gap-3 max-sm:flex max-sm:flex-wrap">
         { /* task: for loop to display weeks data */ }
         
       { weatherdata.daily ? (weatherdata.daily.time.map((time , index) => 
-        <div key={time.toString()+index} className="flex rounded-xl bg-[#25253f] pt-2 pb-2 flex-col items-center max-sm:w-[30%] border">
+        <div key={time.toString()+index} className="flex rounded-xl bg-[#25253f] pt-2 pb-2 flex-col items-center max-sm:w-[30%]">
           <p>{days[weatherdata.daily.time[index].getDay()]}</p>
           <img className="aspect-square w-[70%]" src={pictures[weather_codes_name[weatherdata.daily.weather_code[index].toString()]]} />
-          <div className="flex justify-around border w-full ">
+          <div className="flex justify-around  w-full ">
             <p>{`${weatherdata.daily.temperature_2m_max[index].toFixed(0)}^`}</p>
             <p>{`${weatherdata.daily.temperature_2m_min[index].toFixed(0)}^`}</p>
           </div>
@@ -280,14 +294,14 @@ function Forecast({weatherdata,weather_codes_name,pictures}){
 // feature: display_left
 function Display_left({weather_data,weather_codes_name,pictures}){
   return(
-    <div className="flex flex-col gap-8">
+    <div className="flex  flex-col gap-8">
       <Country weatherdata={weather_data} weather_codes_name={weather_codes_name} pictures={pictures}></Country>
       <Forecast weatherdata={weather_data} weather_codes_name={weather_codes_name} pictures={pictures}></Forecast>
     </div>
   )
 }
 // feature: display_right
-function Display_right({weather_data,pictures}){
+function Display_right({weather_data,weather_codes_name,pictures}){
   const [loop , setLoop] = useState(0);
   const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
   const time_am_pm = {
@@ -363,6 +377,8 @@ function Display_right({weather_data,pictures}){
   if(is_hourly_forecast){
     const hourly_forecast = [];
     let new_date = new Date(weather_data.current.time.getTime()).getHours() + time_index_add.current;
+    let index_date = new Date(weather_data.index_time);
+    console.log("index_date is ",index_date);
     console.log("new_date is ",new_date);
     console.log("loop inside if is ",loop);
     console.log("weather_data inside for loop is ",weather_data);
@@ -377,10 +393,11 @@ function Display_right({weather_data,pictures}){
       console.log("for loop index is ",i);
       console.log("time_am_pm is ",time_am_pm[new_date]);
       console.log("current hourly is  ",weather_data.index_time)
-      hourly_forecast.push(<div className="border bg-[#2f2f49] rounded-md flex justify-between box-border p-3 pl-4 pr-4" key={`${i}`}><h3>{`${time_am_pm[new_date]}`}</h3><p>{`${weather_data.hourly.time[weather_data.index_time.toString()].toFixed(0)}`}^</p></div>); // setLoopStarted -> false
+      hourly_forecast.push(<div className="bg-[#2f2f49] rounded-md flex justify-between items-center box-border p-3 pl-4 pr-4" key={`${i}`}><div className="flex gap-1 items-center"><img className="aspect-square w-[15%]" src={pictures[weather_codes_name[weather_data.hourly.w_code[index_date.toString()]]]} alt="temp" /><h3 className="text-[1.2rem]">{`${time_am_pm[new_date]}`}</h3></div><p>{`${weather_data.hourly.time[index_date.toString()].toFixed(0)}`}^</p></div>); // setLoopStarted -> false
       //increment index
       // weather_data.current.hourly.setMinutes(weather_data.current.hourly.getMinutes() + 60);
       new_date++;
+      index_date.setMinutes(index_date.getMinutes() + 60);
       console.log("weather_data as index is ",weather_data.index_time);
     }
     console.log("hourly_forecast is ",hourly_forecast);
@@ -523,7 +540,7 @@ const pictures = {
   "Mainly clear" : "../assets/images/icon-sunny.webp"
 }
   return(
-    <div>
+    <div className="max-sm:flex max-sm:flex-col gap-8">
         <Display_left weather_data={weather_data} weather_codes_name={weather_codes_name} pictures={pictures}></Display_left>
         <Display_right weather_data={weather_data} weather_codes_name={weather_codes_name} pictures={pictures}></Display_right>
     </div>
@@ -582,7 +599,7 @@ export default function App(){
   <main className="bg-[#02012b] min-h-[100dvh] text-white box-border
   px-[1rem] pt-[1rem] pb-[2rem]">
     <Header></Header>
-    <div className="flex flex-col ">
+    <div className="flex flex-col gap-8 ">
       <SearchPlaces setplace={setWeatherPlace} setcurrentweathername={set_current_weather_name}></SearchPlaces>
       <Display weather_data={weather_place}></Display>
     </div>
